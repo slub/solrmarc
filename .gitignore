@@ -16,5 +16,7 @@
 
 /lib-solrj-5.5.0/
 
+.DS_Store
+
 .idea/*
 _resources/*
