@@ -55,12 +55,21 @@ public class ClassGraphUtils extends ClasspathUtils
                 Class<? extends AbstractValueMappingFactory> clazz = (Class<? extends AbstractValueMappingFactory>) Boot.classForName(classInfo.getName());
                 mappers.add(clazz);
             }
-            
+
             ClassInfoList mixinClassInfo = scanResult.getClassesImplementing("org.solrmarc.index.extractor.impl.custom.Mixin");
             for (ClassInfo classInfo : mixinClassInfo)
             {
-                Class<? extends Mixin> clazz = (Class<? extends Mixin>)  Boot.classForName(classInfo.getName());
-                mixins.add(clazz);
+                    Class<? extends Mixin> clazz = (Class<? extends Mixin>) Boot.classForName(classInfo.getName());
+                    mixins.add(clazz);
+            }
+
+            ClassInfoList vufindClassInfo = scanResult.getAllClasses();
+            for (ClassInfo classInfo : vufindClassInfo)
+            {
+                if(classInfo.getName() != null && (classInfo.getName().contains("org.vufind") || classInfo.getName().contains("info.finc"))) {
+                    Class<? extends Mixin> clazz = (Class<? extends Mixin>) Boot.classForName(classInfo.getName());
+                    mixins.add(clazz);
+                }
             }
         }
         catch (ClassNotFoundException e)

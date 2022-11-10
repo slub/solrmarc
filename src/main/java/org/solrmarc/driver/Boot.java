@@ -118,16 +118,13 @@ public class Boot extends URLClassLoader
     @Override
     protected Class<?> findClass(final String name) throws ClassNotFoundException
     {
-        System.out.println("Trying to find"+ name);
         throw new ClassNotFoundException();
     }
     @Override
     protected synchronized Class<?> loadClass(String className, boolean resolve) throws ClassNotFoundException
     {
-        System.out.println("Trying to load: "+className);
         try
         {
-            System.out.println("Loading class in Child : " + className);
             byte classByte[];
             Class<?> result = null;
 
