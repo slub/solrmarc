@@ -392,7 +392,7 @@ public class Boot extends URLClassLoader
             // IDE
             jarDir = new File(".").getAbsoluteFile().getParentFile().getAbsolutePath();
         }
-        System.setProperty("org.solrmarc.jar.dir", jarDir);
+        System.setProperty("solrmarc.jar.dir", jarDir);
         return(jarDir);
     }
 
@@ -643,7 +643,7 @@ public class Boot extends URLClassLoader
     {
         if (classLoaderToUse != null) return(classLoaderToUse);
         ClassLoader systemClassLoader = ClassLoader.getSystemClassLoader();
-        String forceCustomClassLoaderProperty = System.getProperty("org.solrmarc.force.custom.classloader", "false");
+        String forceCustomClassLoaderProperty = System.getProperty("solrmarc.force.custom.classloader", "false");
         if (systemClassLoader instanceof URLClassLoader && ! forceCustomClassLoaderProperty.equalsIgnoreCase("true"))
         {
             classLoaderToUse = (URLClassLoader)systemClassLoader;
