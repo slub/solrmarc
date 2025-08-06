@@ -6,8 +6,10 @@ import java.util.*;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.SolrInputDocument;
+import org.solrmarc.driver.RecordAndDoc;
 
 import com.google.gson.Gson;
+
 public class NDJSONOutProxy extends SolrProxy
 {
     PrintStream output;
@@ -17,11 +19,12 @@ public class NDJSONOutProxy extends SolrProxy
         this.output = out;
     }
 
-    public int addDoc(SolrInputDocument inputDoc)
+    public int addDoc(RecordAndDoc recdoc)
     {
         synchronized (output)
         {
             Map<String, List<String>> record = new HashMap<String, List<String>>();
+            SolrInputDocument inputDoc = recdoc.getDoc();
             for (String name : inputDoc.getFieldNames()) {
                 ArrayList<String> valList = new ArrayList<String>();
 
@@ -45,12 +48,12 @@ public class NDJSONOutProxy extends SolrProxy
     }
 
     @Override
-    public int addDocs(Collection<SolrInputDocument> docQ)
+    public int addDocs(Collection<RecordAndDoc> recdocQ)
     {
         int num = 0;
-        for (SolrInputDocument doc : docQ)
+        for (RecordAndDoc recdoc : recdocQ)
         {
-            num += this.addDoc(doc);
+            num += this.addDoc(recdoc);
         }
         return(num);
     }
