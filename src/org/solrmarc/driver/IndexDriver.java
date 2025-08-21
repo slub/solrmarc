@@ -1,10 +1,13 @@
 package org.solrmarc.driver;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
@@ -13,7 +16,6 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.Properties;
 import joptsimple.OptionSet;
-
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -28,12 +30,12 @@ import org.solrmarc.index.indexer.IndexerSpecException.eErrorSeverity;
 import org.solrmarc.index.indexer.ValueIndexerFactory;
 import org.solrmarc.marc.SolrMarcMarcReaderFactory;
 import org.solrmarc.solr.DevNullProxy;
+import org.solrmarc.solr.NDJSONOutProxy;
 import org.solrmarc.solr.SolrCoreLoader;
 import org.solrmarc.solr.SolrProxy;
 import org.solrmarc.solr.SolrRuntimeException;
 import org.solrmarc.solr.StdOutProxy;
 import org.solrmarc.solr.XMLOutProxy;
-import org.solrmarc.solr.NDJSONOutProxy;
 import org.solrmarc.tools.PropertyUtils;
 
 
@@ -86,9 +88,9 @@ public class IndexDriver extends BootableMain
     }
 
     /**
-     *  Creates a MarcReader, a collection of AbstractValueIndexer objects, and a SolrProxy object 
+     *  Creates a MarcReader, a collection of AbstractValueIndexer objects, and a SolrProxy object
      *  based on the values in the command-line arguments.  It creates a Indexer object
-     *  and calls processInput which passes the MarcReader to the Indexer object to index all of the 
+     *  and calls processInput which passes the MarcReader to the Indexer object to index all of the
      *  MARC records.
      */
     public void execute()
@@ -99,13 +101,56 @@ public class IndexDriver extends BootableMain
 
         List<String> inputFiles = options.valuesOf(files);
         logger.info("Opening input files: " + Arrays.toString(inputFiles.toArray()));
-        this.configureReader(inputFiles);
-        if (deleteRecordByIdFile.value(options) != null)
+
+        if (inputFiles.size() == 0)
         {
-            this.processDeletes();
+            parseOneByOne();
+        }
+        else
+        {
+            this.configureReader(inputFiles);
+            if (deleteRecordByIdFile.value(options) != null)
+            {
+                this.processDeletes();
+            }
         }
 
         this.processInput();
+    }
+
+    private void parseOneByOne()
+    {
+
+        try (InputStream in = System.in)
+        {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+            int buffer;
+            while ((buffer = in.read()) > -1)
+            {
+
+                baos.write(buffer);
+
+                if (buffer == 29)
+                {
+                    reader = MarcReaderFactory.makeReader(
+                            readerConfig,
+                            ValueIndexerFactory.instance().getHomeDirs(),
+                            new ByteArrayInputStream(baos.toByteArray()));
+
+                    baos = new ByteArrayOutputStream();
+
+                    if (deleteRecordByIdFile.value(options) != null)
+                    {
+                        this.processDeletes();
+                    }
+
+                    this.processInput();
+                }
+            }
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
     }
 
     private void processDeletes()
@@ -150,7 +195,7 @@ public class IndexDriver extends BootableMain
             System.exit(1);
         }
 
-        boolean multithread = options.has("solrURL") && !options.has("debug") ? true : false;
+        boolean multithread = options.has("solrURL") && !options.has("debug") && !options.has("stream") ? true : false;
         try
         {
             this.configureOutput(options);
@@ -329,7 +374,7 @@ public class IndexDriver extends BootableMain
             try  {
                 solrProxy = SolrCoreLoader.loadRemoteSolrServer(solrURL, solrJClassName, true);
             }
-            catch (SolrRuntimeException sre) 
+            catch (SolrRuntimeException sre)
             {
                 logger.error("Error connecting to solr at URL " + solrURL + " : " + sre.getMessage());
                 throw(sre);
