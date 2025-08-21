@@ -1,13 +1,11 @@
 package org.solrmarc.solr;
 
+import com.google.gson.Gson;
 import java.io.PrintStream;
 import java.util.*;
-
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.SolrInputDocument;
-
-import com.google.gson.Gson;
 public class NDJSONOutProxy extends SolrProxy
 {
     PrintStream output;
@@ -22,13 +20,18 @@ public class NDJSONOutProxy extends SolrProxy
         synchronized (output)
         {
             Map<String, List<String>> record = new HashMap<String, List<String>>();
-            for (String name : inputDoc.getFieldNames()) {
+            List<String> fieldNames = new LinkedList<>(inputDoc.getFieldNames());
+            fieldNames.sort(String.CASE_INSENSITIVE_ORDER);
+            for (String name : fieldNames) {
                 ArrayList<String> valList = new ArrayList<String>();
 
                 Iterator values = inputDoc.get(name).iterator();
 
                 while (values.hasNext()) {
-                    valList.add(values.next().toString());
+                    Object v = values.next();
+                    if (v != null) {
+                      valList.add(v.toString());
+                    }
                 }
 
                 record.put(name, valList);
@@ -39,6 +42,7 @@ public class NDJSONOutProxy extends SolrProxy
             String jsonOut = gson.toJson(record);
 
             output.print(jsonOut + "\n");
+            output.flush();
 
             return(1);
         }

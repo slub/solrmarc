@@ -195,7 +195,7 @@ public class IndexDriver extends BootableMain
             System.exit(1);
         }
 
-        boolean multithread = options.has("solrURL") && !options.has("debug") ? true : false;
+        boolean multithread = options.has("solrURL") && !options.has("debug") && !options.has("stream") ? true : false;
         try
         {
             this.configureOutput(options);
