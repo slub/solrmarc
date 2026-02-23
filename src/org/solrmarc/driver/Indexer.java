@@ -157,7 +157,7 @@ public class Indexer
         try {
             if (recDoc.getDoc() != null)
             {
-                solrProxy.addDoc(recDoc.getDoc());
+                solrProxy.addDoc(recDoc);
                 incrementCnt(2);
                 if (recDoc.getErrLvl() != eErrorSeverity.NONE && isSet(eErrorHandleVal.RETURN_ERROR_RECORDS))
                 {
@@ -199,7 +199,7 @@ public class Indexer
         return(cnts);
     }
 
-    RecordAndCnt getRecord(MarcReader reader)
+    public RecordAndCnt getRecord(MarcReader reader)
     {
         Record record = null;
         while (record == null)
@@ -221,34 +221,49 @@ public class Indexer
                     record = null;
                 }
             }
+            catch (Exception e)
+            {
+                logger.error("Unknown Error in MARC record data", e);
+                if (Boolean.parseBoolean(System.getProperty("solrmarc.terminate.on.marc.exception", "true")))
+                {
+                    return(null);
+                }
+                else
+                {
+                    logger.warn("Trying to continue after MARC record data error");
+                    record = null;
+                }
+            }
         }
         int cnt = incrementCnt(0);
         return (new RecordAndCnt(record, cnt));
     }
 
-    RecordAndDoc getIndexDoc(Record record, int count)
+    public RecordAndDoc getIndexDoc(Record record, int count)
     {
         RecordAndDoc recDoc = null;
         recDoc = indexToSolrDoc(record);
         if (recDoc.getSolrMarcIndexerException() != null)
         {
             SolrMarcIndexerException smie = recDoc.getSolrMarcIndexerException();
-            String recCtrlNum = recDoc.rec.getControlNumber();
+            // Attempt to use a custom defined id value if available, then fall back to MARC control number
+            Object docIdObj = recDoc.doc.getFieldValue("id");
+            String docIdStr = (docIdObj != null) ? (String) docIdObj : recDoc.rec.getControlNumber();
             String idMessage = smie.getMessage() != null ? smie.getMessage() : "";
             if (smie.getLevel() == SolrMarcIndexerException.IGNORE)
             {
-                logger.info("Record will be Ignored " + (recCtrlNum != null ? recCtrlNum : "") + " " + idMessage + " (record count " + count + ")");
+                logger.info("Record will be Ignored " + (docIdStr != null ? docIdStr : "") + " " + idMessage + " (record count " + count + ")");
                 return(null);
             }
             else if (smie.getLevel() == SolrMarcIndexerException.DELETE)
             {
-                logger.info("Record will be Deleted " + (recCtrlNum != null ? recCtrlNum : "") + " " + idMessage + " (record count " + count + ")");
-                delQ.add(recCtrlNum);
+                logger.info("Record will be Deleted " + (docIdStr != null ? docIdStr : "") + " " + idMessage + " (record count " + count + ")");
+                delQ.add(docIdStr);
                 return(null);
             }
             else if (smie.getLevel() == SolrMarcIndexerException.EXIT)
             {
-                logger.info("Serious Error flagged in record " + (recCtrlNum != null ? recCtrlNum : "") + " " + idMessage + " (record count " + count + ")");
+                logger.info("Serious Error flagged in record " + (docIdStr != null ? docIdStr : "") + " " + idMessage + " (record count " + count + ")");
                 logger.info("Terminating indexing.");
                 throw new SolrMarcIndexerException(SolrMarcIndexerException.EXIT);
             }
